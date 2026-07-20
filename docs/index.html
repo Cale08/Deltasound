@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Deltasound</title>
+  <meta name="description" content="Fabric client mod for Hypixel SkyBlock — custom sounds from chat triggers." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #14212b;
+      --muted: #4d5d6a;
+      --paper: #f3efe6;
+      --card: rgba(255, 252, 246, 0.82);
+      --accent: #0f7a6c;
+      --accent-2: #c45c26;
+      --line: rgba(20, 33, 43, 0.12);
+      --shadow: 0 24px 60px rgba(20, 33, 43, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "DM Sans", system-ui, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(15, 122, 108, 0.18), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, rgba(196, 92, 38, 0.16), transparent 50%),
+        linear-gradient(180deg, #efe8da 0%, var(--paper) 45%, #e7f0ee 100%);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(980px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+
+    header.hero {
+      padding: 4.5rem 0 3rem;
+      animation: rise 700ms ease both;
+    }
+
+    .brand {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: clamp(3rem, 8vw, 5.2rem);
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      margin: 0 0 1rem;
+    }
+
+    .lede {
+      max-width: 36rem;
+      font-size: 1.15rem;
+      color: var(--muted);
+      margin: 0 0 1.75rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    a.btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 0.8rem 1.2rem;
+      font-weight: 600;
+      transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+    }
+    a.btn:hover { transform: translateY(-1px); }
+    a.btn.primary {
+      background: var(--ink);
+      color: #f7f2e8;
+    }
+    a.btn.ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    section {
+      margin: 1.25rem 0 2.5rem;
+      padding: 1.4rem 1.5rem;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 1.25rem;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      animation: rise 800ms ease both;
+    }
+    section:nth-of-type(2) { animation-delay: 80ms; }
+    section:nth-of-type(3) { animation-delay: 140ms; }
+
+    h2 {
+      font-family: "Fraunces", Georgia, serif;
+      margin: 0 0 0.75rem;
+      font-size: 1.55rem;
+    }
+
+    p, li { color: var(--muted); line-height: 1.55; }
+    ul { padding-left: 1.15rem; margin: 0.4rem 0 0; }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+    pre {
+      overflow: auto;
+      background: #14212b;
+      color: #efe8da;
+      padding: 1rem 1.1rem;
+      border-radius: 0.9rem;
+      margin: 0.85rem 0 0;
+    }
+
+    footer {
+      padding: 1rem 0 3rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <p style="margin:0 0 0.6rem; font-weight:600; color:var(--accent); letter-spacing:0.04em; text-transform:uppercase; font-size:0.8rem;">Fabric · Minecraft 26.1 · Hypixel SkyBlock</p>
+      <h1 class="brand">Deltasound</h1>
+      <p class="lede">
+        Client-side sound triggers for chat events. Configure detection strings in-game,
+        import your own <code>.ogg</code> files, and keep the Minecraft touch-points thin for easy version ports.
+      </p>
+      <div class="actions">
+        <a class="btn primary" id="repo-link" href="https://github.com/PLACEHOLDER/Deltasound">View on GitHub</a>
+        <a class="btn ghost" href="#setup">Setup</a>
+      </div>
+    </header>
+
+    <section>
+      <h2>What it does</h2>
+      <ul>
+        <li>Watches chat for configured text (substring or regex)</li>
+        <li>Plays vanilla or custom sounds when a line matches</li>
+        <li>In-game GUI via <code>/deltasound</code> or <code>/ds</code></li>
+        <li>Import <code>.ogg</code> sounds (file picker or drag-and-drop onto the GUI)</li>
+      </ul>
+    </section>
+
+    <section id="setup">
+      <h2>Setup</h2>
+      <ol>
+        <li>Install Fabric Loader for Minecraft <strong>26.1</strong> and Fabric API</li>
+        <li>Drop the Deltasound jar into your <code>mods</code> folder</li>
+        <li>Join a world and run <code>/ds</code></li>
+        <li>Add a detection string (for example <code>RNG Drop!</code>), pick a sound, Save</li>
+      </ol>
+      <pre>./gradlew build
+# jar → build/libs/deltasound-&lt;version&gt;.jar</pre>
+    </section>
+
+    <section>
+      <h2>Porting</h2>
+      <p>
+        Chat matching lives in pure Java (<code>dev.deltasound.core</code>).
+        Minecraft/Fabric adapters sit in <code>client.bridge</code> so version bumps stay localized.
+        See <code>docs/PORTING.md</code> in the repo.
+      </p>
+    </section>
+
+    <footer>
+      MIT licensed · Built for Fabric on Java 25
+    </footer>
+  </div>
+  <script>
+    // Rewritten after the GitHub repo exists; safe no-op placeholder until then.
+    const host = location.hostname;
+    if (host.endsWith("github.io")) {
+      const user = host.replace(".github.io", "");
+      const repoLink = document.getElementById("repo-link");
+      repoLink.href = `https://github.com/${user}/Deltasound`;
+    }
+  </script>
+</body>
+</html>

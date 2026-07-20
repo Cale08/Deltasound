@@ -1,0 +1,48 @@
+package dev.deltasound.client.bridge;
+
+import dev.deltasound.Deltasound;
+import dev.deltasound.client.DeltasoundClient;
+import dev.deltasound.core.ChatTrigger;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+
+/**
+ * Thin Fabric/Minecraft adapter for inbound chat. Port checklist: verify
+ * {@link ClientReceiveMessageEvents} package + {@link Component#getString()} behavior.
+ */
+public final class ChatEventBridge {
+	private ChatEventBridge() {
+	}
+
+	public static void register(DeltasoundClient mod) {
+		ClientReceiveMessageEvents.GAME.register((message, overlay) -> onGameMessage(mod, message, overlay));
+	}
+
+	private static void onGameMessage(DeltasoundClient mod, Component message, boolean overlay) {
+		String plain = message.getString();
+		if (plain.isBlank()) {
+			return;
+		}
+
+		Minecraft client = Minecraft.getInstance();
+		String localName = client.player != null ? client.player.getGameProfile().name() : null;
+		long now = System.currentTimeMillis();
+
+		mod.triggerEngine()
+				.evaluate(plain, overlay, localName, now)
+				.ifPresent(match -> play(mod, match));
+	}
+
+	private static void play(DeltasoundClient mod, ChatTrigger.Match match) {
+		String soundId = match.trigger().soundId();
+		Deltasound.LOGGER.debug(
+				"Trigger '{}' matched (player='{}', detail='{}') -> {}",
+				match.trigger().id(),
+				match.playerName(),
+				match.detail(),
+				soundId
+		);
+		mod.soundBridge().play(soundId);
+	}
+}

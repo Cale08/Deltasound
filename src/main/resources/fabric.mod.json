@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "deltasound",
+	"version": "${version}",
+	"name": "Deltasound",
+	"description": "Client-side Hypixel SkyBlock sound triggers from chat (and later dungeon rooms).",
+	"authors": [
+		"cfrost"
+	],
+	"contact": {
+		"homepage": "https://cale08.github.io/Deltasound/",
+		"sources": "https://github.com/Cale08/Deltasound"
+	},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.deltasound.client.DeltasoundClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.1",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

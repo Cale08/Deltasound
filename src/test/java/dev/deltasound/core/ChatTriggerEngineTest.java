@@ -18,6 +18,7 @@ class ChatTriggerEngineTest {
 						"RNG Drop!",
 						MatchMode.CONTAINS,
 						"minecraft:entity.player.levelup",
+						1.0f,
 						true,
 						true,
 						0L,
@@ -33,6 +34,7 @@ class ChatTriggerEngineTest {
 		);
 
 		assertTrue(match.isPresent());
+		assertEquals(1.0f, match.get().trigger().volume(), 0.001f);
 	}
 
 	@Test
@@ -44,6 +46,7 @@ class ChatTriggerEngineTest {
 						"RNG Drop! (.+) unlocked (.+)!",
 						MatchMode.REGEX,
 						"minecraft:entity.player.levelup",
+						0.5f,
 						true,
 						true,
 						0L,
@@ -61,6 +64,7 @@ class ChatTriggerEngineTest {
 		assertTrue(match.isPresent());
 		assertEquals("Steve", match.get().playerName());
 		assertEquals("Hyperion", match.get().detail());
+		assertEquals(0.5f, match.get().trigger().volume(), 0.001f);
 	}
 
 	@Test
@@ -72,6 +76,7 @@ class ChatTriggerEngineTest {
 						"RNG Drop! (.+) unlocked (.+)!",
 						MatchMode.REGEX,
 						"minecraft:entity.player.levelup",
+						1.0f,
 						true,
 						true,
 						0L,

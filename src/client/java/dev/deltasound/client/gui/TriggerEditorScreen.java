@@ -4,7 +4,9 @@ import dev.deltasound.Deltasound;
 import dev.deltasound.client.DeltasoundClient;
 import dev.deltasound.client.config.TriggerEntry;
 import dev.deltasound.client.sound.UserSoundPack;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
@@ -13,29 +15,45 @@ import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-import java.awt.FileDialog;
-import java.awt.Frame;
 import java.nio.file.Path;
 import java.util.Locale;
 
 /**
- * Create-trigger form: name, chat activator, and sound (upload or Minecraft picker).
+ * Shared create / edit form for chat triggers.
  */
-public final class AddTriggerScreen extends Screen {
+public final class TriggerEditorScreen extends Screen {
 	private final Screen parent;
 	private final DeltasoundClient mod;
+	private final TriggerEntry editing;
+	private final boolean createMode;
 
 	private HeaderAndFooterLayout layout;
 	private EditBox nameBox;
 	private EditBox matchBox;
 	private StringWidget soundLabel;
 	private StringWidget status;
-	private String selectedSound = "minecraft:entity.player.levelup";
+	private VolumeSlider volumeSlider;
+	private String selectedSound;
+	private float selectedVolume;
 
-	public AddTriggerScreen(Screen parent, DeltasoundClient mod) {
-		super(Component.literal("Add trigger"));
+	public static TriggerEditorScreen create(Screen parent, DeltasoundClient mod) {
+		return new TriggerEditorScreen(parent, mod, null);
+	}
+
+	public static TriggerEditorScreen edit(Screen parent, DeltasoundClient mod, TriggerEntry entry) {
+		return new TriggerEditorScreen(parent, mod, entry);
+	}
+
+	private TriggerEditorScreen(Screen parent, DeltasoundClient mod, TriggerEntry editing) {
+		super(Component.literal(editing == null ? "Add trigger" : "Edit trigger"));
 		this.parent = parent;
 		this.mod = mod;
+		this.editing = editing;
+		this.createMode = editing == null;
+		this.selectedSound = editing != null && editing.sound != null
+				? editing.sound
+				: "minecraft:entity.player.levelup";
+		this.selectedVolume = editing != null ? editing.volumeOrDefault() : 1.0f;
 	}
 
 	@Override
@@ -46,32 +64,47 @@ public final class AddTriggerScreen extends Screen {
 		LinearLayout body = LinearLayout.vertical().spacing(8);
 		body.defaultCellSetting().alignHorizontallyCenter();
 
-		status = body.addChild(new StringWidget(Component.literal("Name the trigger, set chat text, then choose a sound."), font));
+		status = body.addChild(new StringWidget(
+				Component.literal(createMode
+						? "Name the trigger, set chat text, choose a sound and volume."
+						: "Update this trigger, then save."),
+				font
+		));
+		status.setMaxWidth(320, StringWidget.TextOverflow.CLAMPED);
 
 		nameBox = body.addChild(new EditBox(font, 300, 20, Component.literal("Name")));
 		nameBox.setMaxLength(64);
 		nameBox.setHint(Component.literal("Readable name"));
-		nameBox.setValue("RNG Drop");
+		nameBox.setValue(editing != null ? nullToEmpty(editing.name) : "RNG Drop");
 
 		matchBox = body.addChild(new EditBox(font, 300, 20, Component.literal("Activator")));
 		matchBox.setMaxLength(256);
 		matchBox.setHint(Component.literal("Chat text that activates this trigger"));
-		matchBox.setValue("RNG Drop!");
+		matchBox.setValue(editing != null ? nullToEmpty(editing.match) : "RNG Drop!");
 
 		soundLabel = body.addChild(new StringWidget(Component.literal(soundLabelText()), font));
+		soundLabel.setMaxWidth(320, StringWidget.TextOverflow.CLAMPED);
 
 		LinearLayout soundRow = LinearLayout.horizontal().spacing(6);
-		soundRow.addChild(Button.builder(Component.literal("Upload sound"), b -> openFilePicker()).width(110).build());
+		soundRow.addChild(Button.builder(Component.literal("Browse files"), b -> openFileBrowser()).width(110).build());
 		soundRow.addChild(Button.builder(Component.literal("Minecraft sounds"), b ->
 				minecraft.setScreen(new SoundPickerScreen(this, mod, this::setSound))
 		).width(130).build());
-		soundRow.addChild(Button.builder(Component.literal("Test sound"), b -> mod.soundBridge().play(selectedSound)).width(90).build());
+		soundRow.addChild(Button.builder(Component.literal("Test sound"), b ->
+				mod.soundBridge().play(selectedSound, selectedVolume)
+		).width(90).build());
 		body.addChild(soundRow);
+
+		volumeSlider = body.addChild(new VolumeSlider(0, 0, 300, 20, selectedVolume));
+		body.addChild(new StringWidget(Component.literal("Drag to set playback volume."), font));
 
 		layout.addToContents(body);
 
 		LinearLayout footer = LinearLayout.horizontal().spacing(8);
-		footer.addChild(Button.builder(Component.literal("Create"), b -> create()).width(100).build());
+		footer.addChild(Button.builder(
+				Component.literal(createMode ? "Create" : "Save"),
+				b -> save()
+		).width(100).build());
 		footer.addChild(Button.builder(Component.literal("Cancel"), b -> onClose()).width(100).build());
 		layout.addToFooter(footer);
 
@@ -115,22 +148,9 @@ public final class AddTriggerScreen extends Screen {
 		return "Sound: " + selectedSound;
 	}
 
-	private void openFilePicker() {
-		Thread picker = new Thread(() -> {
-			FileDialog dialog = new FileDialog((Frame) null, "Select sound (.ogg / .mp3)", FileDialog.LOAD);
-			dialog.setFile("*.ogg;*.mp3");
-			dialog.setVisible(true);
-			String file = dialog.getFile();
-			String dir = dialog.getDirectory();
-			if (file == null || dir == null) {
-				minecraft.execute(() -> setStatus("Upload cancelled."));
-				return;
-			}
-			Path path = Path.of(dir, file);
-			minecraft.execute(() -> importSound(path));
-		}, "deltasound-file-dialog");
-		picker.setDaemon(true);
-		picker.start();
+	private void openFileBrowser() {
+		Path start = FabricLoader.getInstance().getGameDir();
+		minecraft.setScreen(new FileBrowserScreen(this, start, this::importSound));
 	}
 
 	private void importSound(Path path) {
@@ -153,9 +173,11 @@ public final class AddTriggerScreen extends Screen {
 		}
 	}
 
-	private void create() {
+	private void save() {
 		String name = nameBox.getValue().trim();
 		String match = matchBox.getValue();
+		selectedVolume = volumeSlider.volume();
+
 		if (name.isBlank()) {
 			setStatus("Please enter a name.");
 			return;
@@ -165,9 +187,16 @@ public final class AddTriggerScreen extends Screen {
 			return;
 		}
 
-		TriggerEntry entry = TriggerEntry.create(name, match, selectedSound);
-		mod.configLoader().entries().add(entry);
 		try {
+			if (createMode) {
+				TriggerEntry entry = TriggerEntry.create(name, match, selectedSound, selectedVolume);
+				mod.configLoader().entries().add(entry);
+			} else {
+				editing.name = name;
+				editing.match = match;
+				editing.sound = selectedSound;
+				editing.volume = selectedVolume;
+			}
 			mod.configLoader().saveAndApply(mod.triggerEngine());
 		} catch (Exception ex) {
 			Deltasound.LOGGER.error("Failed saving trigger", ex);
@@ -184,6 +213,33 @@ public final class AddTriggerScreen extends Screen {
 	private void setStatus(String message) {
 		if (status != null) {
 			status.setMessage(Component.literal(message));
+		}
+	}
+
+	private static String nullToEmpty(String value) {
+		return value == null ? "" : value;
+	}
+
+	private final class VolumeSlider extends AbstractSliderButton {
+		VolumeSlider(int x, int y, int width, int height, float initial) {
+			super(x, y, width, height, Component.empty(), initial);
+			updateMessage();
+		}
+
+		float volume() {
+			return (float) value;
+		}
+
+		@Override
+		protected void updateMessage() {
+			int percent = (int) Math.round(value * 100.0);
+			setMessage(Component.literal("Volume: " + percent + "%"));
+			selectedVolume = (float) value;
+		}
+
+		@Override
+		protected void applyValue() {
+			selectedVolume = (float) value;
 		}
 	}
 }

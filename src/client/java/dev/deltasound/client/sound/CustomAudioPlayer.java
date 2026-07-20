@@ -12,17 +12,26 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Plays custom files that Minecraft's sound engine cannot load (notably MP3).
+ * Volume is accepted for API consistency; stock JLayer has no reliable gain control,
+ * so volume {@code <= 0} skips playback and other values play at device default.
  */
 public final class CustomAudioPlayer {
 	private final AtomicReference<Thread> active = new AtomicReference<>();
 	private final AtomicReference<Player> activeMp3 = new AtomicReference<>();
 
 	public void play(Path path) {
+		play(path, 1.0f);
+	}
+
+	public void play(Path path, float volume) {
 		stop();
 		String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
 		Thread thread = new Thread(() -> {
 			try {
 				if (name.endsWith(".mp3")) {
+					if (volume <= 0.001f) {
+						return;
+					}
 					playMp3(path);
 				} else {
 					Deltasound.LOGGER.warn("CustomAudioPlayer only supports MP3; got {}", path);

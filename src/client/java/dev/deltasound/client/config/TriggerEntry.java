@@ -21,6 +21,8 @@ public final class TriggerEntry {
 	public String pattern;
 	public String mode;
 	public String sound;
+	/** 0.0 – 1.0 playback volume. */
+	public Float volume;
 	public Boolean enabled;
 	@SerializedName("ignore_overlay")
 	public Boolean ignoreOverlay;
@@ -36,6 +38,7 @@ public final class TriggerEntry {
 		entry.match = "";
 		entry.mode = MatchMode.CONTAINS.name();
 		entry.sound = "minecraft:entity.player.levelup";
+		entry.volume = 1.0f;
 		entry.enabled = true;
 		entry.ignoreOverlay = true;
 		entry.cooldownMs = 750L;
@@ -43,11 +46,12 @@ public final class TriggerEntry {
 		return entry;
 	}
 
-	public static TriggerEntry create(String name, String match, String sound) {
+	public static TriggerEntry create(String name, String match, String sound, float volume) {
 		TriggerEntry entry = createBlank();
 		entry.name = name == null || name.isBlank() ? "Untitled" : name.trim();
 		entry.match = match == null ? "" : match;
 		entry.sound = sound == null || sound.isBlank() ? "minecraft:entity.player.levelup" : sound.trim();
+		entry.volume = ChatTrigger.clampVolume(volume);
 		entry.id = slug(entry.name) + "_" + UUID.randomUUID().toString().substring(0, 4);
 		return entry;
 	}
@@ -59,6 +63,7 @@ public final class TriggerEntry {
 		entry.match = other.match;
 		entry.mode = other.mode;
 		entry.sound = other.sound;
+		entry.volume = other.volume;
 		entry.enabled = other.enabled;
 		entry.ignoreOverlay = other.ignoreOverlay;
 		entry.cooldownMs = other.cooldownMs;
@@ -76,6 +81,10 @@ public final class TriggerEntry {
 		return "Untitled";
 	}
 
+	public float volumeOrDefault() {
+		return ChatTrigger.clampVolume(volume == null ? 1.0f : volume);
+	}
+
 	public MatchMode matchMode() {
 		return MatchMode.fromConfig(mode);
 	}
@@ -86,6 +95,7 @@ public final class TriggerEntry {
 				match == null ? "" : match,
 				matchMode(),
 				sound == null || sound.isBlank() ? "minecraft:entity.player.levelup" : sound.trim(),
+				volumeOrDefault(),
 				enabled == null || enabled,
 				ignoreOverlay == null || ignoreOverlay,
 				cooldownMs == null ? 0L : cooldownMs,

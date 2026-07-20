@@ -16,6 +16,7 @@ public final class ChatTrigger {
 	private final MatchMode mode;
 	private final Pattern pattern;
 	private final String soundId;
+	private final float volume;
 	private final boolean enabled;
 	private final boolean ignoreOverlay;
 	private final long cooldownMs;
@@ -27,6 +28,7 @@ public final class ChatTrigger {
 			MatchMode mode,
 			Pattern pattern,
 			String soundId,
+			float volume,
 			boolean enabled,
 			boolean ignoreOverlay,
 			long cooldownMs,
@@ -37,6 +39,7 @@ public final class ChatTrigger {
 		this.mode = Objects.requireNonNull(mode, "mode");
 		this.pattern = Objects.requireNonNull(pattern, "pattern");
 		this.soundId = Objects.requireNonNull(soundId, "soundId");
+		this.volume = clampVolume(volume);
 		this.enabled = enabled;
 		this.ignoreOverlay = ignoreOverlay;
 		this.cooldownMs = Math.max(0L, cooldownMs);
@@ -48,6 +51,7 @@ public final class ChatTrigger {
 			String matchText,
 			MatchMode mode,
 			String soundId,
+			float volume,
 			boolean enabled,
 			boolean ignoreOverlay,
 			long cooldownMs,
@@ -65,11 +69,19 @@ public final class ChatTrigger {
 				resolved,
 				pattern,
 				soundId,
+				volume,
 				enabled,
 				ignoreOverlay,
 				cooldownMs,
 				requireLocalPlayerName
 		);
+	}
+
+	public static float clampVolume(float volume) {
+		if (Float.isNaN(volume)) {
+			return 1.0f;
+		}
+		return Math.max(0.0f, Math.min(1.0f, volume));
 	}
 
 	public String id() {
@@ -86,6 +98,10 @@ public final class ChatTrigger {
 
 	public String soundId() {
 		return soundId;
+	}
+
+	public float volume() {
+		return volume;
 	}
 
 	public boolean enabled() {

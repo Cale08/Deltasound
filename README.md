@@ -28,10 +28,11 @@ Commands (client-side):
 
 The main screen is a trigger list:
 
-- **Add trigger** — name, chat activator text, then upload `.ogg`/`.mp3` or pick a Minecraft sound
+- **Add trigger** / **Edit** — name, chat activator, browse files in-game or pick a Minecraft sound, set volume
 - **Test** — posts a client-only chat line `Deltasound Test>> <text>` and runs the trigger pipeline
 - **Delete** — removes a trigger
 
+File picking uses an in-game browser (no Windows native dialog), so it works on Windows 10 and 11.
 ## Development
 
 Minecraft 26.1 needs **JDK 25**. On Windows, Microsoft Build of OpenJDK 25 works well (`winget install Microsoft.OpenJDK.25`). Point `JAVA_HOME` at it, or let Gradle’s toolchain auto-provision/detect it.

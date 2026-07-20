@@ -18,9 +18,13 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 /**
- * Main Deltasound config screen — modern trigger list + Add trigger.
+ * Main Deltasound config screen — trigger list with edit / test / delete.
  */
 public final class DeltasoundScreen extends Screen {
+	private static final int ROW_HEIGHT = 44;
+	private static final int BUTTON_WIDTH = 48;
+	private static final int BUTTON_GAP = 4;
+
 	private final Screen parent;
 	private final DeltasoundClient mod;
 
@@ -36,22 +40,23 @@ public final class DeltasoundScreen extends Screen {
 
 	@Override
 	protected void init() {
-		layout = new HeaderAndFooterLayout(this, 36, 56);
+		layout = new HeaderAndFooterLayout(this, 40, 56);
 		layout.addTitleHeader(title, font);
 
-		list = new TriggerList(minecraft, layout.getContentHeight(), 36);
+		status = new StringWidget(Component.literal(statusText()), font);
+		status.setMaxWidth(Math.max(80, width - 40), StringWidget.TextOverflow.CLAMPED);
+		layout.addToHeader(status);
+
+		list = new TriggerList(minecraft, layout.getContentHeight(), ROW_HEIGHT);
 		layout.addToContents(list);
 		refreshList();
 
 		LinearLayout footer = LinearLayout.horizontal().spacing(8);
 		footer.addChild(Button.builder(Component.literal("Add trigger"), b ->
-				minecraft.setScreen(new AddTriggerScreen(this, mod))
+				minecraft.setScreen(TriggerEditorScreen.create(this, mod))
 		).width(120).build());
 		footer.addChild(Button.builder(Component.literal("Done"), b -> onClose()).width(80).build());
 		layout.addToFooter(footer);
-
-		status = new StringWidget(Component.literal(statusText()), font);
-		layout.addToHeader(status);
 
 		layout.visitWidgets(this::addRenderableWidget);
 		repositionElements();
@@ -63,6 +68,9 @@ public final class DeltasoundScreen extends Screen {
 			layout.arrangeElements();
 			if (list != null) {
 				list.updateSize(width, layout);
+			}
+			if (status != null) {
+				status.setMaxWidth(Math.max(80, width - 40), StringWidget.TextOverflow.CLAMPED);
 			}
 		}
 	}
@@ -97,7 +105,7 @@ public final class DeltasoundScreen extends Screen {
 
 		@Override
 		public int getRowWidth() {
-			return Math.min(480, DeltasoundScreen.this.width - 40);
+			return Math.min(520, DeltasoundScreen.this.width - 40);
 		}
 
 		void resetEntries() {
@@ -111,17 +119,25 @@ public final class DeltasoundScreen extends Screen {
 
 	private final class TriggerRow extends ContainerObjectSelectionList.Entry<TriggerRow> {
 		private final TriggerEntry entry;
+		private final Button editButton;
 		private final Button testButton;
 		private final Button deleteButton;
 
 		TriggerRow(TriggerEntry entry) {
 			this.entry = entry;
+			this.editButton = Button.builder(Component.literal("Edit"), b -> edit())
+					.size(BUTTON_WIDTH, 20)
+					.build();
 			this.testButton = Button.builder(Component.literal("Test"), b -> test())
-					.size(56, 20)
+					.size(BUTTON_WIDTH, 20)
 					.build();
 			this.deleteButton = Button.builder(Component.literal("Delete"), b -> delete())
-					.size(56, 20)
+					.size(BUTTON_WIDTH, 20)
 					.build();
+		}
+
+		private void edit() {
+			minecraft.setScreen(TriggerEditorScreen.edit(DeltasoundScreen.this, mod, entry));
 		}
 
 		private void test() {
@@ -150,26 +166,37 @@ public final class DeltasoundScreen extends Screen {
 			int left = getContentX();
 			int top = getContentY();
 			int right = getContentRight();
+			int buttonY = top + (getContentHeight() - 20) / 2;
 
-			deleteButton.setPosition(right - deleteButton.getWidth(), top + 8);
-			testButton.setPosition(deleteButton.getX() - testButton.getWidth() - 6, top + 8);
+			deleteButton.setPosition(right - BUTTON_WIDTH, buttonY);
+			testButton.setPosition(deleteButton.getX() - BUTTON_GAP - BUTTON_WIDTH, buttonY);
+			editButton.setPosition(testButton.getX() - BUTTON_GAP - BUTTON_WIDTH, buttonY);
+
+			editButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
 			testButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
 			deleteButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
+			int textMaxWidth = Math.max(40, editButton.getX() - left - 12);
 			int textColor = hovered ? 0xFFFFFF : 0xE0E0E0;
-			graphics.text(font, entry.displayName(), left + 4, top + 4, textColor, false);
-			String detail = "\"" + nullToEmpty(entry.match) + "\"  →  " + nullToEmpty(entry.sound);
-			graphics.text(font, detail, left + 4, top + 16, 0xA0A0A0, false);
+			String title = font.plainSubstrByWidth(entry.displayName(), textMaxWidth);
+			String detail = font.plainSubstrByWidth(
+					"\"" + nullToEmpty(entry.match) + "\"  ·  "
+							+ Math.round(entry.volumeOrDefault() * 100) + "%  ·  "
+							+ nullToEmpty(entry.sound),
+					textMaxWidth
+			);
+			graphics.text(font, title, left + 4, top + 8, textColor, false);
+			graphics.text(font, detail, left + 4, top + 22, 0xA0A0A0, false);
 		}
 
 		@Override
 		public List<? extends GuiEventListener> children() {
-			return List.of(testButton, deleteButton);
+			return List.of(editButton, testButton, deleteButton);
 		}
 
 		@Override
 		public List<? extends NarratableEntry> narratables() {
-			return List.of(testButton, deleteButton);
+			return List.of(editButton, testButton, deleteButton);
 		}
 	}
 

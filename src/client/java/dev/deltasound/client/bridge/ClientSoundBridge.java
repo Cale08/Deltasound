@@ -22,7 +22,6 @@ import java.util.Locale;
  * {@link SoundEvent#createVariableRangeEvent(Identifier)}, {@link Identifier} factory.
  */
 public final class ClientSoundBridge {
-	private static final float VOLUME = 1.0f;
 	private static final float PITCH = 1.0f;
 
 	private final CustomSoundLibrary customSounds;
@@ -33,9 +32,14 @@ public final class ClientSoundBridge {
 	}
 
 	public void play(String soundId) {
+		play(soundId, 1.0f);
+	}
+
+	public void play(String soundId, float volume) {
 		if (soundId == null || soundId.isBlank()) {
 			return;
 		}
+		float clamped = Math.max(0.0f, Math.min(1.0f, volume));
 
 		if (customSounds.isCustom(soundId)) {
 			Path path = customSounds.pathFor(soundId).orElse(null);
@@ -45,11 +49,10 @@ public final class ClientSoundBridge {
 			}
 			String lower = path.getFileName().toString().toLowerCase(Locale.ROOT);
 			if (lower.endsWith(".mp3")) {
-				customAudioPlayer.play(path);
-				Deltasound.LOGGER.info("Playing custom MP3 {}", path.getFileName());
+				customAudioPlayer.play(path, clamped);
+				Deltasound.LOGGER.info("Playing custom MP3 {} @ {}", path.getFileName(), clamped);
 				return;
 			}
-			// OGG customs also live in the user resource pack under deltasound:<name>
 		}
 
 		Identifier id;
@@ -83,18 +86,18 @@ public final class ClientSoundBridge {
 					client.player.getZ(),
 					event,
 					SoundSource.MASTER,
-					VOLUME,
+					clamped,
 					PITCH,
 					false
 			);
-			Deltasound.LOGGER.info("Playing {} at player (Master)", id);
+			Deltasound.LOGGER.info("Playing {} at player (Master @ {})", id, clamped);
 			return;
 		}
 
 		SimpleSoundInstance instance = new SimpleSoundInstance(
 				id,
 				SoundSource.MASTER,
-				VOLUME,
+				clamped,
 				PITCH,
 				RandomSource.create(),
 				false,
@@ -106,6 +109,6 @@ public final class ClientSoundBridge {
 				true
 		);
 		SoundEngine.PlayResult result = client.getSoundManager().play(instance);
-		Deltasound.LOGGER.info("Playing {} (Master, menu fallback) -> {}", id, result);
+		Deltasound.LOGGER.info("Playing {} (Master @ {}, menu) -> {}", id, clamped, result);
 	}
 }

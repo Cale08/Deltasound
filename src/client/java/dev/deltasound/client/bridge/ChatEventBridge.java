@@ -53,6 +53,6 @@ public final class ChatEventBridge {
 				match.trigger().id(),
 				soundId
 		);
-		mod.soundBridge().play(soundId);
+		mod.soundBridge().play(soundId, match.trigger().volume());
 	}
 }

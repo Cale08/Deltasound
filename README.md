@@ -4,7 +4,7 @@ Client-side Fabric mod for Hypixel SkyBlock. Plays custom (or vanilla) sounds wh
 
 ## Requirements
 
-- Minecraft **26.1**
+- Minecraft **26.1.2**
 - Java **25**
 - Fabric Loader **0.19.3+**
 - Fabric API
@@ -15,6 +15,10 @@ Client-side Fabric mod for Hypixel SkyBlock. Plays custom (or vanilla) sounds wh
 - Config file written on first launch: `config/deltasound/triggers.json`
 - Default trigger for `RNG Drop! <player> unlocked <drop>!` using a vanilla sound so it works before you add `.ogg` files
 
+## Download
+
+The latest jar is always on the [Releases](https://github.com/Cale08/Deltasound/releases/latest) page (updated automatically on every push to `main`).
+
 ## In-game config
 
 Commands (client-side):
@@ -22,15 +26,11 @@ Commands (client-side):
 - `/deltasound`
 - `/ds`
 
-From the GUI you can:
+The main screen is a trigger list:
 
-- Add/remove chat detection entries
-- Set the text to look for (**Contains** mode by default, or **Regex**)
-- Assign a sound id
-- Import `.ogg` files (button or drag-and-drop onto the screen)
-- Test and Save
-
-Imported sounds live in a resource pack folder named `deltasound_user` and play as `deltasound:<filename>`.
+- **Add trigger** — name, chat activator text, then upload `.ogg`/`.mp3` or pick a Minecraft sound
+- **Test** — posts a client-only chat line `Deltasound Test>> <text>` and runs the trigger pipeline
+- **Delete** — removes a trigger
 
 ## Development
 

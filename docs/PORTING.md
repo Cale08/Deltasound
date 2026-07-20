@@ -31,6 +31,7 @@ Rules:
    - `SoundEvent.createVariableRangeEvent`
    - `SimpleSoundInstance.forUI`
    - `GameProfile` player name accessor
+   - Screen open/close (`Minecraft#setScreenAndShow`, `Gui#screen` on 26.2+)
 6. Smoke test in `runClient`: send a fake chat line or join Hypixel and trigger an RNG message.
 7. Bump `mod_version` and note the Minecraft target in the changelog / commit message.
 

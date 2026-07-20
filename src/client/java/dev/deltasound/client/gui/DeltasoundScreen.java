@@ -1,122 +1,69 @@
 package dev.deltasound.client.gui;
 
-import dev.deltasound.Deltasound;
 import dev.deltasound.client.DeltasoundClient;
+import dev.deltasound.client.bridge.ChatEventBridge;
 import dev.deltasound.client.config.TriggerEntry;
-import dev.deltasound.client.sound.UserSoundPack;
-import dev.deltasound.core.MatchMode;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
+import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-import java.awt.FileDialog;
-import java.awt.Frame;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.Locale;
 
 /**
- * In-game configuration UI opened via {@code /deltasound} or {@code /ds}.
+ * Main Deltasound config screen — modern trigger list + Add trigger.
  */
 public final class DeltasoundScreen extends Screen {
 	private final Screen parent;
 	private final DeltasoundClient mod;
 
 	private HeaderAndFooterLayout layout;
-	private StringWidget statusWidget;
-	private StringWidget indexWidget;
-	private EditBox matchBox;
-	private EditBox soundBox;
-	private EditBox idBox;
-	private CycleButton<MatchMode> modeButton;
-	private CycleButton<Boolean> enabledBox;
-
-	private int selectedIndex;
-	private boolean suppressFieldCallbacks;
+	private TriggerList list;
+	private StringWidget status;
 
 	public DeltasoundScreen(Screen parent, DeltasoundClient mod) {
 		super(Component.literal("Deltasound"));
 		this.parent = parent;
 		this.mod = mod;
-		if (mod.configLoader().entries().isEmpty()) {
-			mod.configLoader().entries().add(TriggerEntry.createDefault());
-		}
 	}
 
 	@Override
 	protected void init() {
-		layout = new HeaderAndFooterLayout(this, 32, 64);
+		layout = new HeaderAndFooterLayout(this, 36, 56);
 		layout.addTitleHeader(title, font);
 
-		LinearLayout body = LinearLayout.vertical().spacing(6);
-		body.defaultCellSetting().alignHorizontallyCenter();
-
-		indexWidget = body.addChild(new StringWidget(Component.empty(), font));
-		statusWidget = body.addChild(new StringWidget(Component.literal("Edit detection text, pick a sound, then Save."), font));
-
-		LinearLayout nav = LinearLayout.horizontal().spacing(6);
-		nav.addChild(Button.builder(Component.literal("Prev"), b -> selectRelative(-1)).width(60).build());
-		nav.addChild(Button.builder(Component.literal("Next"), b -> selectRelative(1)).width(60).build());
-		nav.addChild(Button.builder(Component.literal("Add"), b -> addTrigger()).width(60).build());
-		nav.addChild(Button.builder(Component.literal("Delete"), b -> deleteTrigger()).width(60).build());
-		body.addChild(nav);
-
-		idBox = body.addChild(new EditBox(font, 280, 20, Component.literal("Trigger id")));
-		idBox.setMaxLength(64);
-		idBox.setHint(Component.literal("Trigger id"));
-		idBox.setResponder(value -> updateSelected(entry -> entry.id = value));
-
-		matchBox = body.addChild(new EditBox(font, 280, 20, Component.literal("Detection text")));
-		matchBox.setMaxLength(256);
-		matchBox.setHint(Component.literal("Chat text to look for"));
-		matchBox.setResponder(value -> updateSelected(entry -> entry.match = value));
-
-		modeButton = body.addChild(
-				CycleButton.<MatchMode>builder(mode -> Component.literal("Mode: " + mode.name()), MatchMode.CONTAINS)
-						.withValues(MatchMode.CONTAINS, MatchMode.REGEX)
-						.create(0, 0, 280, 20, Component.literal("Mode"), (button, value) ->
-								updateSelected(entry -> entry.mode = value.name()))
-		);
-
-		soundBox = body.addChild(new EditBox(font, 280, 20, Component.literal("Sound id")));
-		soundBox.setMaxLength(128);
-		soundBox.setHint(Component.literal("minecraft:entity.player.levelup"));
-		soundBox.setResponder(value -> updateSelected(entry -> entry.sound = value));
-
-		enabledBox = body.addChild(
-				CycleButton.booleanBuilder(Component.literal("On"), Component.literal("Off"), true)
-						.create(0, 0, 280, 20, Component.literal("Enabled"), (button, value) ->
-								updateSelected(entry -> entry.enabled = value))
-		);
-
-		LinearLayout actions = LinearLayout.horizontal().spacing(6);
-		actions.addChild(Button.builder(Component.literal("Import .ogg"), b -> openImportDialog()).width(100).build());
-		actions.addChild(Button.builder(Component.literal("Test sound"), b -> testSound()).width(90).build());
-		actions.addChild(Button.builder(Component.literal("Save"), b -> saveConfig()).width(70).build());
-		body.addChild(actions);
-
-		layout.addToContents(body);
+		list = new TriggerList(minecraft, layout.getContentHeight(), 36);
+		layout.addToContents(list);
+		refreshList();
 
 		LinearLayout footer = LinearLayout.horizontal().spacing(8);
-		footer.addChild(Button.builder(Component.literal("Done"), b -> onClose()).width(100).build());
+		footer.addChild(Button.builder(Component.literal("Add trigger"), b ->
+				minecraft.setScreen(new AddTriggerScreen(this, mod))
+		).width(120).build());
+		footer.addChild(Button.builder(Component.literal("Done"), b -> onClose()).width(80).build());
 		layout.addToFooter(footer);
+
+		status = new StringWidget(Component.literal(statusText()), font);
+		layout.addToHeader(status);
 
 		layout.visitWidgets(this::addRenderableWidget);
 		repositionElements();
-		loadSelectedIntoFields();
 	}
 
 	@Override
 	protected void repositionElements() {
 		if (layout != null) {
 			layout.arrangeElements();
+			if (list != null) {
+				list.updateSize(width, layout);
+			}
 		}
 	}
 
@@ -125,146 +72,104 @@ public final class DeltasoundScreen extends Screen {
 		minecraft.setScreen(parent);
 	}
 
-	@Override
-	public void onFilesDrop(List<Path> paths) {
-		for (Path path : paths) {
-			if (path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".ogg")) {
-				importSound(path);
+	void refreshList() {
+		if (list == null) {
+			return;
+		}
+		list.resetEntries();
+		for (TriggerEntry entry : mod.configLoader().entries()) {
+			list.addRow(new TriggerRow(entry));
+		}
+		if (status != null) {
+			status.setMessage(Component.literal(statusText()));
+		}
+	}
+
+	private String statusText() {
+		int count = mod.configLoader().entries().size();
+		return count == 0 ? "No triggers yet — add one to get started." : count + " trigger(s)";
+	}
+
+	private final class TriggerList extends ContainerObjectSelectionList<TriggerRow> {
+		TriggerList(Minecraft client, int height, int itemHeight) {
+			super(client, DeltasoundScreen.this.width, height, 0, itemHeight);
+		}
+
+		@Override
+		public int getRowWidth() {
+			return Math.min(480, DeltasoundScreen.this.width - 40);
+		}
+
+		void resetEntries() {
+			clearEntries();
+		}
+
+		void addRow(TriggerRow row) {
+			addEntry(row);
+		}
+	}
+
+	private final class TriggerRow extends ContainerObjectSelectionList.Entry<TriggerRow> {
+		private final TriggerEntry entry;
+		private final Button testButton;
+		private final Button deleteButton;
+
+		TriggerRow(TriggerEntry entry) {
+			this.entry = entry;
+			this.testButton = Button.builder(Component.literal("Test"), b -> test())
+					.size(56, 20)
+					.build();
+			this.deleteButton = Button.builder(Component.literal("Delete"), b -> delete())
+					.size(56, 20)
+					.build();
+		}
+
+		private void test() {
+			String text = entry.match == null ? "" : entry.match;
+			if (text.isBlank()) {
+				status.setMessage(Component.literal("This trigger has no activator text."));
 				return;
 			}
+			ChatEventBridge.runClientTest(mod, text);
+			status.setMessage(Component.literal("Sent test: Deltasound Test>> " + text));
 		}
-		setStatus("Drop an .ogg file to import it.");
-	}
 
-	private void selectRelative(int delta) {
-		List<TriggerEntry> entries = mod.configLoader().entries();
-		if (entries.isEmpty()) {
-			return;
-		}
-		selectedIndex = Math.floorMod(selectedIndex + delta, entries.size());
-		loadSelectedIntoFields();
-	}
-
-	private void addTrigger() {
-		mod.configLoader().entries().add(TriggerEntry.createDefault());
-		selectedIndex = mod.configLoader().entries().size() - 1;
-		loadSelectedIntoFields();
-		setStatus("Added trigger. Edit fields, then Save.");
-	}
-
-	private void deleteTrigger() {
-		List<TriggerEntry> entries = mod.configLoader().entries();
-		if (entries.isEmpty()) {
-			return;
-		}
-		entries.remove(selectedIndex);
-		if (entries.isEmpty()) {
-			entries.add(TriggerEntry.createDefault());
-			selectedIndex = 0;
-		} else {
-			selectedIndex = Math.min(selectedIndex, entries.size() - 1);
-		}
-		loadSelectedIntoFields();
-		setStatus("Deleted trigger (remember to Save).");
-	}
-
-	private void loadSelectedIntoFields() {
-		List<TriggerEntry> entries = mod.configLoader().entries();
-		if (entries.isEmpty()) {
-			return;
-		}
-		selectedIndex = Math.max(0, Math.min(selectedIndex, entries.size() - 1));
-		TriggerEntry entry = entries.get(selectedIndex);
-
-		suppressFieldCallbacks = true;
-		idBox.setValue(nullToEmpty(entry.id));
-		matchBox.setValue(nullToEmpty(entry.match));
-		soundBox.setValue(nullToEmpty(entry.sound));
-		modeButton.setValue(entry.matchMode());
-		enabledBox.setValue(entry.enabled == null || entry.enabled);
-		suppressFieldCallbacks = false;
-
-		indexWidget.setMessage(Component.literal(
-				"Trigger " + (selectedIndex + 1) + " / " + entries.size()
-		));
-	}
-
-	private void updateSelected(java.util.function.Consumer<TriggerEntry> mutator) {
-		if (suppressFieldCallbacks) {
-			return;
-		}
-		List<TriggerEntry> entries = mod.configLoader().entries();
-		if (entries.isEmpty()) {
-			return;
-		}
-		mutator.accept(entries.get(selectedIndex));
-	}
-
-	private void saveConfig() {
-		try {
-			pushFieldsToSelected();
-			mod.configLoader().saveAndApply(mod.triggerEngine());
-			setStatus("Saved " + mod.configLoader().entries().size() + " trigger(s).");
-		} catch (Exception ex) {
-			Deltasound.LOGGER.error("Failed saving triggers", ex);
-			setStatus("Save failed: " + ex.getMessage());
-		}
-	}
-
-	private void pushFieldsToSelected() {
-		updateSelected(entry -> {
-			entry.id = idBox.getValue().trim();
-			entry.match = matchBox.getValue();
-			entry.sound = soundBox.getValue().trim();
-			entry.mode = modeButton.getValue().name();
-			entry.enabled = enabledBox.getValue();
-		});
-	}
-
-	private void testSound() {
-		pushFieldsToSelected();
-		String sound = soundBox.getValue().trim();
-		if (sound.isEmpty()) {
-			setStatus("Set a sound id first.");
-			return;
-		}
-		mod.soundBridge().play(sound);
-		setStatus("Playing " + sound);
-	}
-
-	private void openImportDialog() {
-		Thread picker = new Thread(() -> {
-			FileDialog dialog = new FileDialog((Frame) null, "Import OGG sound", FileDialog.LOAD);
-			dialog.setFile("*.ogg");
-			dialog.setVisible(true);
-			String file = dialog.getFile();
-			String dir = dialog.getDirectory();
-			if (file == null || dir == null) {
-				minecraft.execute(() -> setStatus("Import cancelled."));
+		private void delete() {
+			mod.configLoader().entries().remove(entry);
+			try {
+				mod.configLoader().saveAndApply(mod.triggerEngine());
+			} catch (Exception ex) {
+				status.setMessage(Component.literal("Delete failed: " + ex.getMessage()));
 				return;
 			}
-			Path path = Path.of(dir, file);
-			minecraft.execute(() -> importSound(path));
-		}, "deltasound-file-dialog");
-		picker.setDaemon(true);
-		picker.start();
-	}
-
-	private void importSound(Path path) {
-		try {
-			String soundId = UserSoundPack.importOgg(Minecraft.getInstance(), path);
-			soundBox.setValue(soundId);
-			updateSelected(entry -> entry.sound = soundId);
-			setStatus("Imported " + soundId + " (pack enabled).");
-		} catch (IOException ex) {
-			Deltasound.LOGGER.error("Sound import failed", ex);
-			setStatus("Import failed: " + ex.getMessage());
+			refreshList();
 		}
-	}
 
-	private void setStatus(String message) {
-		if (statusWidget != null) {
-			statusWidget.setMessage(Component.literal(message));
+		@Override
+		public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
+			int left = getContentX();
+			int top = getContentY();
+			int right = getContentRight();
+
+			deleteButton.setPosition(right - deleteButton.getWidth(), top + 8);
+			testButton.setPosition(deleteButton.getX() - testButton.getWidth() - 6, top + 8);
+			testButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
+			deleteButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
+
+			int textColor = hovered ? 0xFFFFFF : 0xE0E0E0;
+			graphics.text(font, entry.displayName(), left + 4, top + 4, textColor, false);
+			String detail = "\"" + nullToEmpty(entry.match) + "\"  →  " + nullToEmpty(entry.sound);
+			graphics.text(font, detail, left + 4, top + 16, 0xA0A0A0, false);
+		}
+
+		@Override
+		public List<? extends GuiEventListener> children() {
+			return List.of(testButton, deleteButton);
+		}
+
+		@Override
+		public List<? extends NarratableEntry> narratables() {
+			return List.of(testButton, deleteButton);
 		}
 	}
 

@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import dev.deltasound.core.ChatTrigger;
 import dev.deltasound.core.MatchMode;
 
+import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.PatternSyntaxException;
 
@@ -12,7 +13,9 @@ import java.util.regex.PatternSyntaxException;
  */
 public final class TriggerEntry {
 	public String id;
-	/** User-facing detection string (substring or regex depending on {@link #mode}). */
+	/** Human-readable label shown in the list. */
+	public String name;
+	/** Chat text that activates this trigger (substring match by default). */
 	public String match;
 	/** Legacy field from early configs; migrated into {@link #match}. */
 	public String pattern;
@@ -26,22 +29,33 @@ public final class TriggerEntry {
 	@SerializedName("require_local_player_name")
 	public Boolean requireLocalPlayerName;
 
-	public static TriggerEntry createDefault() {
+	public static TriggerEntry createBlank() {
 		TriggerEntry entry = new TriggerEntry();
 		entry.id = "trigger_" + UUID.randomUUID().toString().substring(0, 8);
-		entry.match = "RNG Drop!";
+		entry.name = "New trigger";
+		entry.match = "";
 		entry.mode = MatchMode.CONTAINS.name();
 		entry.sound = "minecraft:entity.player.levelup";
 		entry.enabled = true;
 		entry.ignoreOverlay = true;
-		entry.cooldownMs = 1500L;
+		entry.cooldownMs = 750L;
 		entry.requireLocalPlayerName = false;
+		return entry;
+	}
+
+	public static TriggerEntry create(String name, String match, String sound) {
+		TriggerEntry entry = createBlank();
+		entry.name = name == null || name.isBlank() ? "Untitled" : name.trim();
+		entry.match = match == null ? "" : match;
+		entry.sound = sound == null || sound.isBlank() ? "minecraft:entity.player.levelup" : sound.trim();
+		entry.id = slug(entry.name) + "_" + UUID.randomUUID().toString().substring(0, 4);
 		return entry;
 	}
 
 	public static TriggerEntry copyOf(TriggerEntry other) {
 		TriggerEntry entry = new TriggerEntry();
 		entry.id = other.id;
+		entry.name = other.name;
 		entry.match = other.match;
 		entry.mode = other.mode;
 		entry.sound = other.sound;
@@ -50,6 +64,16 @@ public final class TriggerEntry {
 		entry.cooldownMs = other.cooldownMs;
 		entry.requireLocalPlayerName = other.requireLocalPlayerName;
 		return entry;
+	}
+
+	public String displayName() {
+		if (name != null && !name.isBlank()) {
+			return name.trim();
+		}
+		if (id != null && !id.isBlank()) {
+			return id;
+		}
+		return "Untitled";
 	}
 
 	public MatchMode matchMode() {
@@ -67,5 +91,11 @@ public final class TriggerEntry {
 				cooldownMs == null ? 0L : cooldownMs,
 				requireLocalPlayerName != null && requireLocalPlayerName
 		);
+	}
+
+	private static String slug(String value) {
+		String slug = value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_");
+		slug = slug.replaceAll("^_|_$", "");
+		return slug.isBlank() ? "trigger" : slug;
 	}
 }

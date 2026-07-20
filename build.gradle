@@ -7,6 +7,7 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
+	mavenCentral()
 }
 
 loom {
@@ -24,6 +25,9 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// MP3 playback for imported custom sounds (jar-in-jar)
+	include(implementation("javazoom:jlayer:1.0.1"))
 
 	testImplementation "org.junit.jupiter:junit-jupiter:5.12.2"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"

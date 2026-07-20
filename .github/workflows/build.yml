@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+
+      - name: Grant Gradle permissions
+        run: chmod +x gradlew
+
+      - name: Build
+        run: ./gradlew build --no-daemon
+
+      - name: Read mod version
+        id: version
+        run: |
+          VERSION=$(grep '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '\r')
+          MC=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2 | tr -d '\r')
+          echo "mod_version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "minecraft_version=$MC" >> "$GITHUB_OUTPUT"
+          echo "Mod $VERSION for Minecraft $MC"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deltasound-${{ steps.version.outputs.mod_version }}
+          path: |
+            build/libs/deltasound-*.jar
+            !build/libs/*-sources.jar
+          if-no-files-found: error
+
+      - name: Publish Latest release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest (${{ steps.version.outputs.mod_version }})
+          body: |
+            Automated build from `main`.
+
+            - **Mod version:** `${{ steps.version.outputs.mod_version }}`
+            - **Minecraft:** `${{ steps.version.outputs.minecraft_version }}`
+            - **Commit:** ${{ github.sha }}
+
+            Download `deltasound-${{ steps.version.outputs.mod_version }}.jar` below and drop it in your `mods` folder (Fabric + Fabric API).
+          files: |
+            build/libs/deltasound-${{ steps.version.outputs.mod_version }}.jar
+          fail_on_unmatched_files: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

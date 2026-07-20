@@ -16,12 +16,14 @@ public final class ChatEventBridge {
 	}
 
 	public static void register(DeltasoundClient mod) {
-		ClientReceiveMessageEvents.GAME.register((message, overlay) -> onGameMessage(mod, message, overlay));
+		ClientReceiveMessageEvents.GAME.register((message, overlay) -> handlePlain(mod, message.getString(), overlay));
 	}
 
-	private static void onGameMessage(DeltasoundClient mod, Component message, boolean overlay) {
-		String plain = message.getString();
-		if (plain.isBlank()) {
+	/**
+	 * Shared evaluation path for real chat and client-side test messages.
+	 */
+	public static void handlePlain(DeltasoundClient mod, String plain, boolean overlay) {
+		if (plain == null || plain.isBlank()) {
 			return;
 		}
 
@@ -34,13 +36,21 @@ public final class ChatEventBridge {
 				.ifPresent(match -> play(mod, match));
 	}
 
+	public static void runClientTest(DeltasoundClient mod, String triggerText) {
+		Minecraft client = Minecraft.getInstance();
+		String line = "Deltasound Test>> " + triggerText;
+		Component message = Component.literal(line);
+		if (client.gui != null && client.gui.getChat() != null) {
+			client.gui.getChat().addClientSystemMessage(message);
+		}
+		handlePlain(mod, line, false);
+	}
+
 	private static void play(DeltasoundClient mod, ChatTrigger.Match match) {
 		String soundId = match.trigger().soundId();
-		Deltasound.LOGGER.debug(
-				"Trigger '{}' matched (player='{}', detail='{}') -> {}",
+		Deltasound.LOGGER.info(
+				"Trigger '{}' matched -> {}",
 				match.trigger().id(),
-				match.playerName(),
-				match.detail(),
 				soundId
 		);
 		mod.soundBridge().play(soundId);

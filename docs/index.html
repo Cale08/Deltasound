@@ -138,14 +138,15 @@
 <body>
   <div class="wrap">
     <header class="hero">
-      <p style="margin:0 0 0.6rem; font-weight:600; color:var(--accent); letter-spacing:0.04em; text-transform:uppercase; font-size:0.8rem;">Fabric · Minecraft 26.1 · Hypixel SkyBlock</p>
+      <p style="margin:0 0 0.6rem; font-weight:600; color:var(--accent); letter-spacing:0.04em; text-transform:uppercase; font-size:0.8rem;">Fabric · Minecraft 26.1.2 · Hypixel SkyBlock</p>
       <h1 class="brand">Deltasound</h1>
       <p class="lede">
         Client-side sound triggers for chat events. Configure detection strings in-game,
         import your own <code>.ogg</code> files, and keep the Minecraft touch-points thin for easy version ports.
       </p>
       <div class="actions">
-        <a class="btn primary" id="repo-link" href="https://github.com/PLACEHOLDER/Deltasound">View on GitHub</a>
+        <a class="btn primary" id="repo-link" href="https://github.com/Cale08/Deltasound/releases/latest">Download latest</a>
+        <a class="btn ghost" href="https://github.com/Cale08/Deltasound">View on GitHub</a>
         <a class="btn ghost" href="#setup">Setup</a>
       </div>
     </header>
@@ -163,7 +164,7 @@
     <section id="setup">
       <h2>Setup</h2>
       <ol>
-        <li>Install Fabric Loader for Minecraft <strong>26.1</strong> and Fabric API</li>
+        <li>Install Fabric Loader for Minecraft <strong>26.1.2</strong> and Fabric API</li>
         <li>Drop the Deltasound jar into your <code>mods</code> folder</li>
         <li>Join a world and run <code>/ds</code></li>
         <li>Add a detection string (for example <code>RNG Drop!</code>), pick a sound, Save</li>
@@ -186,12 +187,13 @@
     </footer>
   </div>
   <script>
-    // Rewritten after the GitHub repo exists; safe no-op placeholder until then.
     const host = location.hostname;
     if (host.endsWith("github.io")) {
       const user = host.replace(".github.io", "");
-      const repoLink = document.getElementById("repo-link");
-      repoLink.href = `https://github.com/${user}/Deltasound`;
+      const download = document.getElementById("repo-link");
+      if (download) {
+        download.href = `https://github.com/${user}/Deltasound/releases/latest`;
+      }
     }
   </script>
 </body>

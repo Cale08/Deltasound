@@ -17,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.PatternSyntaxException;
 
 /**
  * Loads/saves chat triggers from {@code config/deltasound/triggers.json}.
@@ -47,21 +46,19 @@ public final class TriggerConfigLoader {
 			Files.createDirectories(configDir);
 			if (Files.notExists(configPath)) {
 				entries.clear();
-				entries.addAll(defaultEntries());
 				save();
 			} else {
 				readIntoEntries();
 			}
 			applyTo(engine);
 		} catch (IOException | JsonSyntaxException | IllegalArgumentException ex) {
-			Deltasound.LOGGER.error("Failed to load {}; falling back to built-in defaults", configPath, ex);
+			Deltasound.LOGGER.error("Failed to load {}; starting with empty trigger list", configPath, ex);
 			entries.clear();
-			entries.addAll(defaultEntries());
 			applyTo(engine);
 		}
 	}
 
-	public void saveAndApply(ChatTriggerEngine engine) throws IOException, PatternSyntaxException {
+	public void saveAndApply(ChatTriggerEngine engine) throws IOException {
 		save();
 		applyTo(engine);
 	}
@@ -91,8 +88,7 @@ public final class TriggerConfigLoader {
 		try (Reader reader = Files.newBufferedReader(configPath)) {
 			TriggerFile file = GSON.fromJson(reader, TriggerFile.class);
 			entries.clear();
-			if (file == null || file.triggers == null || file.triggers.isEmpty()) {
-				entries.addAll(defaultEntries());
+			if (file == null || file.triggers == null) {
 				return;
 			}
 			for (TriggerEntry entry : file.triggers) {
@@ -106,22 +102,12 @@ public final class TriggerConfigLoader {
 				if (entry.mode == null || entry.mode.isBlank()) {
 					entry.mode = MatchMode.CONTAINS.name();
 				}
+				if (entry.name == null || entry.name.isBlank()) {
+					entry.name = entry.id != null ? entry.id : "Untitled";
+				}
 				entries.add(entry);
 			}
 		}
-	}
-
-	private static List<TriggerEntry> defaultEntries() {
-		TriggerEntry rng = TriggerEntry.createDefault();
-		rng.id = "rng_drop";
-		rng.match = "RNG Drop!";
-		rng.mode = MatchMode.CONTAINS.name();
-		rng.sound = "minecraft:entity.player.levelup";
-		rng.enabled = true;
-		rng.ignoreOverlay = true;
-		rng.cooldownMs = 1500L;
-		rng.requireLocalPlayerName = false;
-		return List.of(rng);
 	}
 
 	private static final class TriggerFile {

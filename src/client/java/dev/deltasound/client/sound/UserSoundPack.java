@@ -49,7 +49,7 @@ public final class UserSoundPack {
 					  "pack": {
 					    "description": "Deltasound user-imported sounds",
 					    "min_format": 84,
-					    "max_format": 84
+					    "max_format": 88
 					  }
 					}
 					""");
@@ -61,7 +61,7 @@ public final class UserSoundPack {
 		ensurePack(client);
 		String fileName = source.getFileName().toString();
 		if (!fileName.toLowerCase(Locale.ROOT).endsWith(".ogg")) {
-			throw new IOException("Only .ogg files are supported");
+			throw new IOException("Expected an .ogg file");
 		}
 
 		String base = fileName.substring(0, fileName.length() - 4)

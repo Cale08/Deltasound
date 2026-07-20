@@ -5,6 +5,7 @@ import dev.deltasound.client.bridge.ChatEventBridge;
 import dev.deltasound.client.bridge.ClientSoundBridge;
 import dev.deltasound.client.command.DeltasoundCommands;
 import dev.deltasound.client.config.TriggerConfigLoader;
+import dev.deltasound.client.sound.CustomSoundLibrary;
 import dev.deltasound.client.sound.UserSoundPack;
 import dev.deltasound.core.ChatTriggerEngine;
 import net.fabricmc.api.ClientModInitializer;
@@ -14,7 +15,8 @@ public final class DeltasoundClient implements ClientModInitializer {
 	private static DeltasoundClient instance;
 
 	private final ChatTriggerEngine triggerEngine = new ChatTriggerEngine();
-	private final ClientSoundBridge soundBridge = new ClientSoundBridge();
+	private final CustomSoundLibrary customSounds = new CustomSoundLibrary();
+	private final ClientSoundBridge soundBridge = new ClientSoundBridge(customSounds);
 	private final TriggerConfigLoader configLoader = new TriggerConfigLoader();
 
 	public static DeltasoundClient get() {
@@ -33,9 +35,14 @@ public final class DeltasoundClient implements ClientModInitializer {
 		return configLoader;
 	}
 
+	public CustomSoundLibrary customSounds() {
+		return customSounds;
+	}
+
 	@Override
 	public void onInitializeClient() {
 		instance = this;
+		customSounds.load();
 		configLoader.loadInto(triggerEngine);
 		ChatEventBridge.register(this);
 		DeltasoundCommands.register(this);

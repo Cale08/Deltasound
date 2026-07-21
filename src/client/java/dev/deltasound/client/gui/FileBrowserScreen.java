@@ -9,6 +9,7 @@ import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 
 import java.io.File;
 import java.io.IOException;
@@ -195,7 +196,7 @@ public final class FileBrowserScreen extends Screen {
 		@Override
 		public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
 			boolean selected = equals(list.getSelected());
-			int color = selected || hovered ? 0xFFFFFF : 0xC0C0C0;
+			int color = selected || hovered ? ARGB.opaque(0xFFFFFF) : ARGB.opaque(0xC0C0C0);
 			String prefix = directory ? "[DIR] " : "      ";
 			String text = font.plainSubstrByWidth(prefix + label, getContentWidth() - 8);
 			graphics.text(font, text, getContentX() + 4, getContentY() + 6, color, false);

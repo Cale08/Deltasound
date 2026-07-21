@@ -10,6 +10,7 @@ import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
@@ -141,7 +142,7 @@ public final class SoundPickerScreen extends Screen {
 
 		@Override
 		public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
-			int color = hovered || equals(list.getSelected()) ? 0xFFFFFF : 0xC0C0C0;
+			int color = hovered || equals(list.getSelected()) ? ARGB.opaque(0xFFFFFF) : ARGB.opaque(0xC0C0C0);
 			graphics.text(font, soundId, getContentX() + 4, getContentY() + 6, color, false);
 		}
 

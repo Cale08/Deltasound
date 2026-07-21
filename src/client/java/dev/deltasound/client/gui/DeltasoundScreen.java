@@ -14,6 +14,7 @@ import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 
 import java.util.List;
 
@@ -177,7 +178,7 @@ public final class DeltasoundScreen extends Screen {
 			deleteButton.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
 			int textMaxWidth = Math.max(40, editButton.getX() - left - 12);
-			int textColor = hovered ? 0xFFFFFF : 0xE0E0E0;
+			int textColor = hovered ? ARGB.opaque(0xFFFFFF) : ARGB.opaque(0xE0E0E0);
 			String title = font.plainSubstrByWidth(entry.displayName(), textMaxWidth);
 			String detail = font.plainSubstrByWidth(
 					"\"" + nullToEmpty(entry.match) + "\"  ·  "
@@ -186,7 +187,7 @@ public final class DeltasoundScreen extends Screen {
 					textMaxWidth
 			);
 			graphics.text(font, title, left + 4, top + 8, textColor, false);
-			graphics.text(font, detail, left + 4, top + 22, 0xA0A0A0, false);
+			graphics.text(font, detail, left + 4, top + 22, ARGB.opaque(0xA0A0A0), false);
 		}
 
 		@Override

@@ -5,7 +5,8 @@
 	"name": "Deltasound",
 	"description": "Client-side Hypixel SkyBlock sound triggers from chat (and later dungeon rooms).",
 	"authors": [
-		"cfrost"
+		"cfrost",
+		"ukpan25"
 	],
 	"contact": {
 		"homepage": "https://cale08.github.io/Deltasound/",
